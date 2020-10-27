@@ -1,0 +1,53 @@
+#! /usr/bin/env python
+import argparse
+import os
+
+from lme_pipeline.workflows import create_lme_metrics_workflow
+
+def coords(s):
+    try:
+        x, y, z = map(int, s.split(','))
+        return x, y, z
+    except:
+        raise argparse.ArgumentTypeError("Coordinates must be x,y,z")
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description = 'Obtain thickness, MTR, and T2-star metrics at an LME. Requires IACL '
+                                                   'pipeline to have been run.')
+    parser.add_argument('-d', '--directory', type=str, default=os.getcwd())
+    parser.add_argument('-p', '--patient-id', type=str)
+    parser.add_argument('-s', '--scan-id', type=str)
+    parser.add_argument('-t2star', '--t2star-image', type=str)
+    parser.add_argument('-mtr', '--mtr-image', type=str)
+    parser.add_argument('-mton', '--mton-image', type=str)
+    parser.add_argument('-mtoff', '--mtoff-image', type=str)
+    #Add registration flag
+    parser.add_argument('-c', '--coord', type=coords)#, nargs=3)
+    parser.add_argument('-r', '--register', action='store_true', default=False)
+    #Allow for multiple positions
+    parser.add_argument('-k', '--clean-working-dirs', action='store_true', default=False)
+    args = parser.parse_args()
+
+    if args.directory is not None:
+        args.directory = os.path.abspath(os.path.expanduser(args.directory))
+
+    for argname in ['t2star_image', 'mtr_image', 'mton_image', 'mtoff_image']:
+        if getattr(args, argname) is not None:
+            setattr(args, argname, os.path.abspath(os.path.expanduser(getattr(args, argname))))
+
+    #Parameter files
+    wf = create_lme_metrics_workflow(args.directory, args.patient_id, args.scan_id, args.register, args.coord)
+
+    for argname in ['t2star_image', 'mtr_image']:
+        #if getattr(args, argname) is not None:
+        setattr(wf.inputs.input_node, argname, getattr(args, argname))
+
+    #wf.write_graph(dotfilename='test.png', graph2use='flat')
+    wf.run()
+
+    if args.clean_working_dirs:
+        wf.clean()
+
+        #segment_cvs -d /Users/jiwonoh/Documents/CVS_test -t1 /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVMS010_18101CAVMS010/NIFTI/RESEARCH_RESEARCH_NEURO_3D_T1_MPRAGE_20190808121525_5.nii.gz -epi /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVMS010_18101CAVMS010/NIFTI/RESEARCH_RESEARCH_NEURO_3D_T2STAR_segEPI_20190808121525_7.nii.gz -flair /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVMS010_18101CAVMS010/NIFTI/RESEARCH_RESEARCH_NEURO_3D_T2_FLAIR_20190808121525_6.nii.gz
+
+        #segment_cvs -d /Users/jiwonoh/Documents/CVS_test_01 -t1 /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVSMS001_18101CAVSMS001/NIFTI/RESEARCH_RESEARCH_NEURO_3D_T1_MPRAGE_20190705120706_5.nii.gz -epi /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVSMS001_18101CAVSMS001/NIFTI/RESEARCH_RESEARCH_NEURO_3D_T2STAR_segEPI_20190705120706_7.nii.gz -flair /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVSMS001_18101CAVSMS001/NIFTI/RESEARCH_RESEARCH_NEURO_3D_T2_FLAIR_20190705120706_6.nii.gz
