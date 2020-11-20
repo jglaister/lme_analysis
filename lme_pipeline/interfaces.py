@@ -247,7 +247,11 @@ class ProcessLME(BaseInterface):
 
         with open(outfile, mode='w') as file:
             file_writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            file_writer.writerow(['LMECoordinateMNI', 'LMECentralSurfCoordinateMNI', 'OppositeCentralSurfCoordinateMNI','Thickness_LMEmm','Thickness_Oppmm','MTR_LME', 'MTR_Opp','T2Star_LME','T2Star_Opp'])
+            file_writer.writerow(['LME Coordinate (MNI)', 'LME Central Surface Coordinate (MNI)',
+                                  'Opposite Central Surface Coordinate (MNI)','Thickness LME (mm)',
+                                  'Thickness Opposite (mm)','MTR (LME)', 'MTR (Opposite)','T2Star (LME)',
+                                  'T2Star (Opposite)'])
+
             file_writer.writerow([coord, coord_cen, opp_cen, thickness_coord[0], thickness_opp[0], MTR_coord[0], MTR_opp[0], T2star_coord[0], T2star_opp[0]])
 
         return runtime
