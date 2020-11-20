@@ -23,6 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('-mtoff', '--mtoff-image', type=str)
     #Add registration flag
     parser.add_argument('-c', '--coord', type=coords)#, nargs=3)
+    parser.add_argument('-n', '--coord-label', type=str, default='')
     parser.add_argument('-r', '--register', action='store_true', default=False)
     #Allow for multiple positions
     parser.add_argument('-k', '--clean-working-dirs', action='store_true', default=False)
@@ -36,7 +37,7 @@ if __name__ == '__main__':
             setattr(args, argname, os.path.abspath(os.path.expanduser(getattr(args, argname))))
 
     #Parameter files
-    wf = create_lme_metrics_workflow(args.directory, args.patient_id, args.scan_id, args.register, args.coord)
+    wf = create_lme_metrics_workflow(args.directory, args.patient_id, args.scan_id, args.register, args.coord, args.coord_label)
 
     for argname in ['t2star_image', 'mtr_image']:
         #if getattr(args, argname) is not None:

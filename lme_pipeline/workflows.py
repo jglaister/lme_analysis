@@ -30,7 +30,7 @@ class PipelineWorkflow(Workflow):
             shutil.rmtree(self.base_dir)
 
 
-def create_lme_metrics_workflow(scan_directory, patient_id=None, scan_id=None, register_flag=False, coord=None):
+def create_lme_metrics_workflow(scan_directory, patient_id=None, scan_id=None, register_flag=False, coord=None, coord_label=''):
     """
 
 
@@ -39,7 +39,7 @@ segment_cvs -d /Users/jiwonoh/Documents/CVS_test -t1 /Users/jiwonoh/Desktop/Test
 
 /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVMS010_18101CAVMS010/RESEARCH_RESEARCH_NEURO_3D_T1_MPRAGE_20190808121525_5.nii.gz
 """
-    name = 'lme_metrics'
+    name = 'lme_metrics' + coord_label
     #If patient id and scan id are provided, assume an IACL folder structure
     #Otherwise assume that we are saving in the specified directory
     print(coord)
