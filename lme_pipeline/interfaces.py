@@ -200,6 +200,7 @@ class ProcessLME(BaseInterface):
         coord_class = macruise_data[coord_cen_round[0], coord_cen_round[1], coord_cen_round[2]]
         print('Coord class: ' + str(coord_class))
 
+        #This code block forces the opposite class to have the same class as coord
         #if coord_class%2==0:
         #    opp_class = coord_class + 1
         #else:
@@ -207,6 +208,8 @@ class ProcessLME(BaseInterface):
         #nodes_numpy_array_round = np.round(nodes_numpy_array_cen).astype(int)
         #central_class = macruise_data[nodes_numpy_array_round[:,0],nodes_numpy_array_round[:,1],nodes_numpy_array_round[:,2]]
         #nodes_numpy_array_cen_c = nodes_numpy_array_cen[central_class == opp_class,:]
+        #n =  np.argmin(np.sum((nodes_numpy_array_cen_c - opp)**2, 1))
+        #opp_cen = nodes_numpy_array_cen_c[n, :]
 
         if coord[0]>msp: #Opposite of above to ensure that opp is across the MSP
             outer_nodes = nodes_numpy_array[nodes_numpy_array[:,0] < msp, :]
@@ -216,8 +219,7 @@ class ProcessLME(BaseInterface):
         opp_out = outer_nodes[n, :]
         n = np.argmin(np.sum((nodes_numpy_array_cen - opp_out)**2, 1))
         opp_cen = nodes_numpy_array_cen[n, :]
-        #n =  np.argmin(np.sum((nodes_numpy_array_cen_c - opp)**2, 1))
-        #opp_cen = nodes_numpy_array_cen_c[n, :]
+
 
         #Obtain values from thickness, MTR, T2star
         #TODO: Separate to interface
@@ -245,8 +247,8 @@ class ProcessLME(BaseInterface):
 
         with open(outfile, mode='w') as file:
             file_writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            file_writer.writerow(['LMECoordinateMNI', 'OppCoordinateMNI','Thickness_LME','Thickness_Opp','MTR_LME', 'MTR_Opp','T2Star_LME','T2Star_Opp'])
-            file_writer.writerow([coord, opp_cen, thickness_coord[0], thickness_opp[0], MTR_coord[0], MTR_opp[0], T2star_coord[0], T2star_opp[0]])
+            file_writer.writerow(['LMECoordinateMNI', 'LMECentralSurfCoordinateMNI', 'OppositeCentralSurfCoordinateMNI','Thickness_LME','Thickness_Opp','MTR_LME', 'MTR_Opp','T2Star_LME','T2Star_Opp'])
+            file_writer.writerow([coord, coord_cen, opp_cen, thickness_coord[0], thickness_opp[0], MTR_coord[0], MTR_opp[0], T2star_coord[0], T2star_opp[0]])
 
         return runtime
 
