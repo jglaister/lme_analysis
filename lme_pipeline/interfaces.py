@@ -131,7 +131,7 @@ class ProcessLME(BaseInterface):
         central_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_central.vtk'))[0]
         inner_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_inner.vtk'))[0]
 
-        coord_orig = self.inputs.coordinate#(140, 167, 152)
+        coord_orig = self.inputs.coordinate
 
         transform = []
         with open(self.inputs.transform_file) as textFile:
@@ -172,7 +172,6 @@ class ProcessLME(BaseInterface):
 
 
         #Load VTK files
-        #central_file = '/Users/jiwonoh/Desktop/LME_Scans/2025120/20251/20/20251_20_MPRAGEPre_reg_macruise_central.vtk'
         reader = vtk.vtkPolyDataReader()
         reader.SetFileName(outer_file)
         reader.Update()
@@ -192,6 +191,7 @@ class ProcessLME(BaseInterface):
             outer_nodes = nodes_numpy_array[nodes_numpy_array[:,0] > msp, :]
         else:
             outer_nodes = nodes_numpy_array[nodes_numpy_array[:,0] < msp, :]
+
         n = np.argmin(np.sum((outer_nodes - coord)**2, 1))
         coord_out = outer_nodes[n, :]
         n = np.argmin(np.sum((nodes_numpy_array_cen - coord_out)**2, 1))
@@ -200,23 +200,24 @@ class ProcessLME(BaseInterface):
         coord_class = macruise_data[coord_cen_round[0], coord_cen_round[1], coord_cen_round[2]]
         print('Coord class: ' + str(coord_class))
 
-        if coord_class%2==0:
-            opp_class = coord_class + 1
-        else:
-            opp_class = coord_class - 1
-        nodes_numpy_array_round = np.round(nodes_numpy_array_cen).astype(int)
-        central_class = macruise_data[nodes_numpy_array_round[:,0],nodes_numpy_array_round[:,1],nodes_numpy_array_round[:,2]]
-        nodes_numpy_array_cen_c = nodes_numpy_array_cen[central_class == opp_class,:]
-        #if coord[0]>msp: #Opposite of above to ensure that opp is across the MSP
-        #    outer_nodes = nodes_numpy_array[nodes_numpy_array[:,0] < msp, :]
+        #if coord_class%2==0:
+        #    opp_class = coord_class + 1
         #else:
-        #    outer_nodes = nodes_numpy_array[nodes_numpy_array[:,0] > msp, :]
-        #n = np.argmin(np.sum((outer_nodes - opp)**2, 1))
-        #opp_out = outer_nodes[n, :]
-        #n = np.argmin(np.sum((nodes_numpy_array_cen - opp_out)**2, 1))
-        #opp_cen = nodes_numpy_array_cen[n, :]
-        n =  np.argmin(np.sum((nodes_numpy_array_cen_c - opp)**2, 1))
-        opp_cen = nodes_numpy_array_cen_c[n, :]
+        #    opp_class = coord_class - 1
+        #nodes_numpy_array_round = np.round(nodes_numpy_array_cen).astype(int)
+        #central_class = macruise_data[nodes_numpy_array_round[:,0],nodes_numpy_array_round[:,1],nodes_numpy_array_round[:,2]]
+        #nodes_numpy_array_cen_c = nodes_numpy_array_cen[central_class == opp_class,:]
+
+        if coord[0]>msp: #Opposite of above to ensure that opp is across the MSP
+            outer_nodes = nodes_numpy_array[nodes_numpy_array[:,0] < msp, :]
+        else:
+            outer_nodes = nodes_numpy_array[nodes_numpy_array[:,0] > msp, :]
+        n = np.argmin(np.sum((outer_nodes - opp)**2, 1))
+        opp_out = outer_nodes[n, :]
+        n = np.argmin(np.sum((nodes_numpy_array_cen - opp_out)**2, 1))
+        opp_cen = nodes_numpy_array_cen[n, :]
+        #n =  np.argmin(np.sum((nodes_numpy_array_cen_c - opp)**2, 1))
+        #opp_cen = nodes_numpy_array_cen_c[n, :]
 
         #Obtain values from thickness, MTR, T2star
         #TODO: Separate to interface
