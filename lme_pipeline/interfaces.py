@@ -239,7 +239,7 @@ class ProcessLME(BaseInterface):
         MTR_opp = MTR_interp(opp_cen)
         MTR_coord = MTR_interp(coord_cen)
 
-        thickness_interp = RegularGridInterpolator((np.arange(0,thickness.shape[0]), np.arange(0,thickness.shape[1]), np.arange(0,thickness.shape[2])), thickness)
+        thickness_interp = RegularGridInterpolator((np.arange(0,thickness.shape[0]), np.arange(0,thickness.shape[1]), np.arange(0,thickness.shape[2])), 0.8*thickness)
         thickness_opp = thickness_interp(opp_cen)
         thickness_coord = thickness_interp(coord_cen)
 
@@ -247,7 +247,7 @@ class ProcessLME(BaseInterface):
 
         with open(outfile, mode='w') as file:
             file_writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            file_writer.writerow(['LMECoordinateMNI', 'LMECentralSurfCoordinateMNI', 'OppositeCentralSurfCoordinateMNI','Thickness_LME','Thickness_Opp','MTR_LME', 'MTR_Opp','T2Star_LME','T2Star_Opp'])
+            file_writer.writerow(['LMECoordinateMNI', 'LMECentralSurfCoordinateMNI', 'OppositeCentralSurfCoordinateMNI','Thickness_LMEmm','Thickness_Oppmm','MTR_LME', 'MTR_Opp','T2Star_LME','T2Star_Opp'])
             file_writer.writerow([coord, coord_cen, opp_cen, thickness_coord[0], thickness_opp[0], MTR_coord[0], MTR_opp[0], T2star_coord[0], T2star_opp[0]])
 
         return runtime
