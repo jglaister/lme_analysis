@@ -179,7 +179,7 @@ class ProcessLME(BaseInterface):
         nodes_vtk_array = reader.GetOutput().GetPoints().GetData()
         outer_surface_nodes = vtk_to_numpy(nodes_vtk_array)
         nodes_vtk_array = reader.GetOutput().GetPointData().GetScalars()
-        outer_surface_thickness_nodes = vtk_to_numpy(nodes_vtk_array)
+        outer_surface_thickness_nodes = 0.8 * vtk_to_numpy(nodes_vtk_array)
 
         reader = vtk.vtkPolyDataReader()
         reader.SetFileName(central_file)
@@ -191,12 +191,14 @@ class ProcessLME(BaseInterface):
         #Determine central surface coordinates
         if coord[0] > msp: #Limit central surface coordinates to only those on the same side as coord
             outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] > msp, :]
+            thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:,0] > msp]
         else:
             outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] < msp, :]
+            thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:, 0] < msp]
 
         n = np.argmin(np.sum((outer_nodes - coord)**2, 1))
         coord_out = outer_nodes[n, :]
-        coord_thickness_out = outer_surface_thickness_nodes[n]
+        coord_thickness_out = thickness_nodes[n]
         n = np.argmin(np.sum((central_surface_nodes - coord_out)**2, 1))
         coord_cen = central_surface_nodes[n, :]
 
@@ -215,11 +217,14 @@ class ProcessLME(BaseInterface):
 
         if coord[0]>msp: #Opposite of above to ensure that opp is across the MSP
             outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] < msp, :]
+            thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:, 0] < msp]
         else:
             outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] > msp, :]
+            thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:, 0] > msp]
+
         n = np.argmin(np.sum((outer_nodes - opp)**2, 1))
         opp_out = outer_nodes[n, :]
-        opp_thickness_out = outer_surface_thickness_nodes[n]
+        opp_thickness_out = thickness_nodes[n]
         n = np.argmin(np.sum((central_surface_nodes - opp_out)**2, 1))
         opp_cen = central_surface_nodes[n, :]
 
