@@ -127,9 +127,9 @@ class ProcessLME(BaseInterface):
         central_ls_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_central.nii.gz'))[0]
         inner_ls_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_inner.nii.gz'))[0]
 
-        outer_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_outer.vtk'))[0]
+        outer_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_outer_thickness.vtk'))[0]
         central_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_central.vtk'))[0]
-        inner_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_inner.vtk'))[0]
+        # inner_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_inner.vtk'))[0]
 
         coord_orig = self.inputs.coordinate
 
@@ -177,48 +177,51 @@ class ProcessLME(BaseInterface):
         reader.Update()
         reader.GetOutput()
         nodes_vtk_array = reader.GetOutput().GetPoints().GetData()
-        nodes_numpy_array = vtk_to_numpy(nodes_vtk_array)
+        outer_surface_nodes = vtk_to_numpy(nodes_vtk_array)
+        nodes_vtk_array = reader.GetOutput().GetPointData().GetScalars()
+        outer_surface_thickness_nodes = vtk_to_numpy(nodes_vtk_array)
 
         reader = vtk.vtkPolyDataReader()
         reader.SetFileName(central_file)
         reader.Update()
         reader.GetOutput()
         nodes_vtk_array = reader.GetOutput().GetPoints().GetData()
-        nodes_numpy_array_cen = vtk_to_numpy(nodes_vtk_array)
+        central_surface_nodes = vtk_to_numpy(nodes_vtk_array)
 
         #Determine central surface coordinates
         if coord[0] > msp: #Limit central surface coordinates to only those on the same side as coord
-            outer_nodes = nodes_numpy_array[nodes_numpy_array[:,0] > msp, :]
+            outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] > msp, :]
         else:
-            outer_nodes = nodes_numpy_array[nodes_numpy_array[:,0] < msp, :]
+            outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] < msp, :]
 
         n = np.argmin(np.sum((outer_nodes - coord)**2, 1))
         coord_out = outer_nodes[n, :]
-        n = np.argmin(np.sum((nodes_numpy_array_cen - coord_out)**2, 1))
-        coord_cen = nodes_numpy_array_cen[n, :]
-        coord_cen_round = np.round(coord_cen).astype(int)
-        coord_class = macruise_data[coord_cen_round[0], coord_cen_round[1], coord_cen_round[2]]
-        print('Coord class: ' + str(coord_class))
+        coord_thickness_out = outer_surface_thickness_nodes[n]
+        n = np.argmin(np.sum((central_surface_nodes - coord_out)**2, 1))
+        coord_cen = central_surface_nodes[n, :]
 
         #This code block forces the opposite class to have the same class as coord
         #if coord_class%2==0:
         #    opp_class = coord_class + 1
         #else:
         #    opp_class = coord_class - 1
-        #nodes_numpy_array_round = np.round(nodes_numpy_array_cen).astype(int)
+        #nodes_numpy_array_round = np.round(central_surface_nodes).astype(int)
         #central_class = macruise_data[nodes_numpy_array_round[:,0],nodes_numpy_array_round[:,1],nodes_numpy_array_round[:,2]]
-        #nodes_numpy_array_cen_c = nodes_numpy_array_cen[central_class == opp_class,:]
+        #nodes_numpy_array_cen_c = central_surface_nodes[central_class == opp_class,:]
         #n =  np.argmin(np.sum((nodes_numpy_array_cen_c - opp)**2, 1))
         #opp_cen = nodes_numpy_array_cen_c[n, :]
+        #coord_cen_round = np.round(coord_cen).astype(int)
+        #coord_class = macruise_data[coord_cen_round[0], coord_cen_round[1], coord_cen_round[2]]
 
         if coord[0]>msp: #Opposite of above to ensure that opp is across the MSP
-            outer_nodes = nodes_numpy_array[nodes_numpy_array[:,0] < msp, :]
+            outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] < msp, :]
         else:
-            outer_nodes = nodes_numpy_array[nodes_numpy_array[:,0] > msp, :]
+            outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] > msp, :]
         n = np.argmin(np.sum((outer_nodes - opp)**2, 1))
         opp_out = outer_nodes[n, :]
-        n = np.argmin(np.sum((nodes_numpy_array_cen - opp_out)**2, 1))
-        opp_cen = nodes_numpy_array_cen[n, :]
+        opp_thickness_out = outer_surface_thickness_nodes[n]
+        n = np.argmin(np.sum((central_surface_nodes - opp_out)**2, 1))
+        opp_cen = central_surface_nodes[n, :]
 
 
         #Obtain values from thickness, MTR, T2star
@@ -248,11 +251,12 @@ class ProcessLME(BaseInterface):
         with open(outfile, mode='w') as file:
             file_writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             file_writer.writerow(['LME Coordinate (MNI)', 'LME Central Surface Coordinate (MNI)',
-                                  'Opposite Central Surface Coordinate (MNI)','Thickness LME (mm)',
-                                  'Thickness Opposite (mm)','MTR (LME)', 'MTR (Opposite)','T2Star (LME)',
+                                  'Opposite Central Surface Coordinate (MNI)','CThickness LME (mm)',
+                                  'CThickness Opposite (mm)','OThickness LME (mm)',
+                                  'OThickness Opposite (mm)','MTR (LME)', 'MTR (Opposite)','T2Star (LME)',
                                   'T2Star (Opposite)'])
 
-            file_writer.writerow([coord, coord_cen, opp_cen, thickness_coord[0], thickness_opp[0], MTR_coord[0], MTR_opp[0], T2star_coord[0], T2star_opp[0]])
+            file_writer.writerow([coord, coord_cen, opp_cen, thickness_coord[0], thickness_opp[0], coord_thickness_out[0], opp_thickness_out[0], MTR_coord[0], MTR_opp[0], T2star_coord[0], T2star_opp[0]])
 
         return runtime
 
