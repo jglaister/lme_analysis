@@ -256,7 +256,7 @@ class ProcessLME(BaseInterface):
                                   'OThickness Opposite (mm)','MTR (LME)', 'MTR (Opposite)','T2Star (LME)',
                                   'T2Star (Opposite)'])
 
-            file_writer.writerow([coord, coord_cen, opp_cen, thickness_coord[0], thickness_opp[0], coord_thickness_out[0], opp_thickness_out[0], MTR_coord[0], MTR_opp[0], T2star_coord[0], T2star_opp[0]])
+            file_writer.writerow([coord, coord_cen, opp_cen, thickness_coord[0], thickness_opp[0], coord_thickness_out, opp_thickness_out, MTR_coord[0], MTR_opp[0], T2star_coord[0], T2star_opp[0]])
 
         return runtime
 
