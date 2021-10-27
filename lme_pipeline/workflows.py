@@ -1,9 +1,14 @@
 
 import os  # system functions
 import shutil
-
 from glob import glob
-from nipype import Workflow, Node, MapNode, Function, IdentityInterface
+
+import nipype.pipeline.engine as pe
+import nipype.interfaces.fsl as fsl
+import nipype.interfaces.ants as ants
+import nipype.interfaces.utility as util
+
+#from nipype import Workflow, Node, MapNode, Function, IdentityInterface
 from nipype.interfaces.ants import N4BiasFieldCorrection, Registration, ApplyTransforms
 from nipype.interfaces.fsl import Smooth, Split
 from nipype.interfaces.ants import MultiplyImages
@@ -11,7 +16,7 @@ from nipype.interfaces.utility import Split as SplitList
 
 from .interfaces import ProcessMTR, ConvertTransformFile, ProcessLME
 
-class PipelineWorkflow(Workflow):
+class PipelineWorkflow(pe.Workflow):
     def __init__(self, name, scan_directory, patient_id=None, scan_id=None):
         self.scan_directory = scan_directory
         self.patient_id = patient_id if patient_id is not None else ''
@@ -30,7 +35,7 @@ class PipelineWorkflow(Workflow):
             shutil.rmtree(self.base_dir)
 
 
-def create_lme_metrics_workflow(scan_directory, patient_id=None, scan_id=None, register_flag=False, coord=None, coord_label=''):
+def create_lme_metrics_workflow(scan_directory, patient_id=None, scan_id=None, reg_mt=True, coord=None):
     """
 
 
@@ -39,7 +44,10 @@ segment_cvs -d /Users/jiwonoh/Documents/CVS_test -t1 /Users/jiwonoh/Desktop/Test
 
 /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVMS010_18101CAVMS010/RESEARCH_RESEARCH_NEURO_3D_T1_MPRAGE_20190808121525_5.nii.gz
 """
-    name = 'lme_metrics' + coord_label
+
+
+
+    name = 'lme_metrics' + scan_id
     #If patient id and scan id are provided, assume an IACL folder structure
     #Otherwise assume that we are saving in the specified directory
     print(coord)
@@ -53,23 +61,22 @@ segment_cvs -d /Users/jiwonoh/Documents/CVS_test -t1 /Users/jiwonoh/Desktop/Test
     wf = PipelineWorkflow(name, scan_directory, patient_id, scan_id)
     #wf = Workflow(name, scan_directory)
 
-    input_node = Node(IdentityInterface(fields=['t2star_image', 'mtr_image', 'mton_image', 'mtoff_image'],  mandatory_inputs=False), 'input_node')
+    input_node = pe.Node(util.IdentityInterface(fields=['t2star_image', 'mtr_image', 'mton_image', 'mtoff_image'],
+                                                mandatory_inputs=False), 'input_node')
+    compute_coord = True if coord is not None else False
+    compute_t2star = True if input_node.inputs.t2star_image is not None else False
+    compute_mtr = True if input_node.inputs.mton_image is not None else False
+    split_mt = True if compute_mtr and input_node.inputs.mtoff_image is None else False
 
-    #if patient_id is not None and scan_id is not None:
-    #    scan_path = os.path.join(scan_directory, patient_id, scan_id)
-    #else:
-    #    scan_path = scan_directory
-
-    #input_node = Node(IdentityInterface(fields=['t1_image', 'label_fusion', 'filled_wm', 'wm_mask', 'cortical_gm',
-    #                                            'atlas_values'],  mandatory_inputs=False), 'input_node')
-
+    # Grab needed results from IACL folder
     t1_image = glob(os.path.join(scan_path, '*_MPRAGEPre_reg.nii.gz'))[0]
     bm_image = glob(os.path.join(scan_path, '*_MPRAGEPre_reg_mask.nii.gz'))[0]
     flairpg_image = glob(os.path.join(scan_path, '*_FLAIRPost_3D_reg.nii.gz'))[0]
     flairpg_mat = glob(os.path.join(scan_path, '*_FLAIRPost_3D_reg.mat'))[0]
     flair_tf = glob(os.path.join(scan_path, '*_FLAIRPost_3D_reg.mat'))[0]
 
-
+    if split_mt:
+        True
     # bias_correction_t1 = Node(N4BiasFieldCorrection(), "bias_t1")
     # bias_correction_t1.inputs.shrink_factor = 4
     # bias_correction_t1.inputs.n_iterations = [200, 200, 200, 200]
@@ -171,17 +178,17 @@ segment_cvs -d /Users/jiwonoh/Documents/CVS_test -t1 /Users/jiwonoh/Desktop/Test
     #     wf.connect([(transform_mton, process_mtr, [('output_image', 'mton_file')])])
     #     wf.connect([(reg_mtoff_to_t1, process_mtr, [('warped_image', 'mtoff_file')])])
     #
-    convert_tf = Node(ConvertTransformFile(), 'convert_tf')
+    convert_tf = pe.Node(ConvertTransformFile(), 'convert_tf')
     convert_tf.inputs.input_transform_file = flair_tf
     convert_tf.inputs.hm = True
     convert_tf.inputs.ras = True
     wf.add_nodes([convert_tf])
     # # TODO: Convert tranform file to txt
 
-    output_node = Node(IdentityInterface(fields=['transform_file']), 'output_node')
+    output_node = pe.Node(util.IdentityInterface(fields=['transform_file']), 'output_node')
     wf.connect([(convert_tf, output_node, [('transform_file', 'transform_file')])])
 
-    process_lme = Node(ProcessLME(), 'process_lme')
+    process_lme = pe.Node(ProcessLME(), 'process_lme')
     process_lme.inputs.scan_path = scan_path
     process_lme.inputs.coordinate = coord
     wf.connect([(convert_tf, process_lme, [('transform_file', 'transform_file')])])
@@ -189,77 +196,6 @@ segment_cvs -d /Users/jiwonoh/Documents/CVS_test -t1 /Users/jiwonoh/Desktop/Test
     wf.connect([(input_node, process_lme, [('mtr_image', 'mtr_file')])])
 
     return wf
-    # reg_epi_to_t1 = Node(Registration(), "epi_reg")
-    # reg_epi_to_t1.inputs.initial_moving_transform_com = 1
-    # reg_epi_to_t1.inputs.metric = ['MI', 'MI']
-    # reg_epi_to_t1.inputs.metric_weight = [1.0, 1.0]
-    # reg_epi_to_t1.inputs.radius_or_number_of_bins = [32, 32]
-    # reg_epi_to_t1.inputs.sampling_strategy = ['Regular', 'Regular']
-    # reg_epi_to_t1.inputs.sampling_percentage = [0.1, 0.1]
-    # reg_epi_to_t1.inputs.transforms = ['Rigid', 'Affine']
-    # reg_epi_to_t1.inputs.transform_parameters = [(0.1,), (0.1,)]
-    # reg_epi_to_t1.inputs.number_of_iterations = [[100, 75, 50, 25],
-    #                                              [100, 75, 50, 25]]
-    # reg_epi_to_t1.inputs.convergence_threshold = [1.e-6, 1.e-6]
-    # reg_epi_to_t1.inputs.convergence_window_size = [10, 10]
-    # reg_epi_to_t1.inputs.smoothing_sigmas = [[3, 2, 1, 0], [3, 2, 1, 0]]
-    # reg_epi_to_t1.inputs.sigma_units = ['vox', 'vox']
-    # reg_epi_to_t1.inputs.shrink_factors = [[8, 4, 2, 1], [8, 4, 2, 1]]
-    # reg_epi_to_t1.inputs.winsorize_upper_quantile = 0.99
-    # reg_epi_to_t1.inputs.winsorize_lower_quantile = 0.01
-    # reg_epi_to_t1.inputs.collapse_output_transforms = True  # For explicit completeness
-    # reg_epi_to_t1.inputs.float = True
-    # reg_epi_to_t1.inputs.use_estimate_learning_rate_once = [True, True]
-    # reg_epi_to_t1.inputs.output_warped_image = True
-    #
-    # wf.connect([(bias_correction_t1, reg_epi_to_t1, [('output_image', 'fixed_image')]),
-    #             (bias_correction_epi, reg_epi_to_t1, [('output_image', 'moving_image')])])
-    #
-    # #BET skull stripping on T1
-    # bet = Node(FSLBET_Robust_R(), "run_bet")
-    # # bet.inputs.mask = True
-    # wf.connect([(bias_correction_t1, bet, [('output_image', 'in_t1')])])
-    #
-    # apply_bet_flair = Node(MultiplyImages(), "apply_bet_flair")
-    # apply_bet_flair.inputs.dimension = 3
-    # apply_bet_flair.inputs.output_product_image = "flair_ss.nii.gz"
-    # wf.connect([(bet, apply_bet_flair, [('out_mask', 'first_input')]),
-    #             (reg_flair_to_t1, apply_bet_flair, [('warped_image', 'second_input')])])
-    #
-    # mimosa = Node(MIMOSA_R(), "mimosa")
-    # wf.connect([(bet, mimosa, [('out_mask', 'in_mask')]),
-    #             (bet, mimosa, [('out_ss', 'in_t1')]),
-    #             (apply_bet_flair, mimosa, [('output_product_image', 'in_flair')])])
-    #
-    # sm = Node(Smooth(),"smooth_mimosa")
-    # sm.inputs.sigma = 1.25
-    # wf.connect([(mimosa, sm, [('out_mimosa', 'in_file')])])
-    # #Check results with R
-    #
-    # transform_mimosa = Node(ApplyTransforms(), "transform_mimosa")
-    # transform_mimosa.inputs.invert_transform_flags = True
-    # transform_mimosa.inputs.interpolation = 'Linear'
-    # transform_mimosa.inputs.default_value = 0
-    # wf.connect([(reg_epi_to_t1, transform_mimosa, [('forward_transforms', 'transforms')])])
-    # wf.connect([(sm, transform_mimosa, [('smoothed_file', 'input_image')])])
-    # wf.connect([(bias_correction_epi, transform_mimosa, [('output_image', 'reference_image')])])
-    #
-    # frangi_filter = Node(FrangiFilter(), "frangi_filter")
-    # wf.connect([(transform_mimosa, frangi_filter, [('output_image', 'in_mask')])])
-    # wf.connect([(bias_correction_epi, frangi_filter, [('output_image', 'in_im')])])
-    #
-    # lesion_centers = Node(LesionCenter(), "lesion_center")
-    # wf.connect([(sm, lesion_centers, [('smoothed_file', 'in_im')])])
-    # wf.connect([(sm, lesion_centers, [('smoothed_file', 'les_mask')])])
-    #
-    # outputnode = Node(IdentityInterface(["t1_ss", "brainmask", "tflm"]), "outputnode")
-    # wf.connect([(bet, outputnode, [('out_ss', 't1_ss')]),
-    #             (bet, outputnode, [('out_mask', 'brainmask')]),
-    #             (frangi_filter, outputnode, [('out_frangi', 'tflm')])])
-    #
-    #
-    # #Remove ventricles
-    # #Find lesion centroid
 
 
 
