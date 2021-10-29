@@ -34,7 +34,6 @@ if __name__ == '__main__':
         if getattr(args, argname) is not None:
             setattr(args, argname, os.path.abspath(os.path.expanduser(getattr(args, argname))))
 
-    #Parameter files
     wf = create_lme_metrics_workflow(args.directory, args.patient_id, args.scan_id, args.reg_mt, args.coord)
 
     for argname in ['t2star_image', 'mton_image', 'mtoff_image']:
@@ -46,6 +45,3 @@ if __name__ == '__main__':
     else:
         wf.run(plugin='MultiProc', plugin_args={'n_procs': args.num_threads})
 
-        #segment_cvs -d /Users/jiwonoh/Documents/CVS_test -t1 /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVMS010_18101CAVMS010/NIFTI/RESEARCH_RESEARCH_NEURO_3D_T1_MPRAGE_20190808121525_5.nii.gz -epi /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVMS010_18101CAVMS010/NIFTI/RESEARCH_RESEARCH_NEURO_3D_T2STAR_segEPI_20190808121525_7.nii.gz -flair /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVMS010_18101CAVMS010/NIFTI/RESEARCH_RESEARCH_NEURO_3D_T2_FLAIR_20190808121525_6.nii.gz
-
-        #segment_cvs -d /Users/jiwonoh/Documents/CVS_test_01 -t1 /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVSMS001_18101CAVSMS001/NIFTI/RESEARCH_RESEARCH_NEURO_3D_T1_MPRAGE_20190705120706_5.nii.gz -epi /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVSMS001_18101CAVSMS001/NIFTI/RESEARCH_RESEARCH_NEURO_3D_T2STAR_segEPI_20190705120706_7.nii.gz -flair /Users/jiwonoh/Desktop/Test_CAVSMS_dicom/18101CAVSMS001_18101CAVSMS001/NIFTI/RESEARCH_RESEARCH_NEURO_3D_T2_FLAIR_20190705120706_6.nii.gz

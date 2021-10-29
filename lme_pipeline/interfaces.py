@@ -105,7 +105,7 @@ class ProcessLMEInputSpec(BaseInterfaceInputSpec):
     scan_path = Directory(exists=True, desc='file to threshold', mandatory=True)#traits.Str('combined.mat', desc='output file name', argstr='%s', usedefault=True)
     transform_file = File(exists=True, desc='file to threshold', mandatory=True)
     prefix = traits.String('output', usedefault=True)
-    coordinate = traits.Tuple(traits.Int, traits.Int, traits.Int, mandatory=True)
+    coordinate = traits.List(traits.Tuple(traits.Int, traits.Int, traits.Int), mandatory=True)
 
 class ProcessLMEOutputSpec(TraitedSpec):
     lme_csv = File(exists=True, desc='binary mask')
