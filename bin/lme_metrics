@@ -17,12 +17,13 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--directory', type=str, help='IACL root directory', required=True)
     parser.add_argument('-p', '--patient-id', type=str, required=True)
     parser.add_argument('-s', '--scan-id', type=str, required=True)
-    parser.add_argument('-t2star', '--t2star-image', type=str)
-    parser.add_argument('-mton', '--mton-image',
-                        help='MT_ON image or both MT images as a single volume (with MT first)', type=str)
-    parser.add_argument('-mtoff', '--mtoff-image', type=str)
-    parser.add_argument('--reg-mt', help='If set, affinely register the MT_ON image to T1, then warp MT_OFF.',
-                        action='store_true', default=False)
+    parser.add_argument('-i', '--image-files', help='List of image files to obtain metrics from', type=str, nargs='+')
+    #parser.add_argument('-t2star', '--t2star-image', type=str)
+    #parser.add_argument('-mton', '--mton-image',
+    #                    help='MT_ON image or both MT images as a single volume (with MT first)', type=str)
+    #parser.add_argument('-mtoff', '--mtoff-image', type=str)
+    #parser.add_argument('--reg-mt', help='If set, affinely register the MT_ON image to T1, then warp MT_OFF.',
+    #                    action='store_true', default=False)
     parser.add_argument('-c', '--coord', type=coords, help='List of LME coordinates', nargs='+')
     parser.add_argument('-t', '--num_threads', type=int, default=1)
     args = parser.parse_args()
@@ -30,15 +31,20 @@ if __name__ == '__main__':
     if args.directory is not None:
         args.directory = os.path.abspath(os.path.expanduser(args.directory))
 
-    for argname in ['t2star_image', 'mton_image', 'mtoff_image']:
-        if getattr(args, argname) is not None:
-            setattr(args, argname, os.path.abspath(os.path.expanduser(getattr(args, argname))))
+    if args.image_files is not None:
+        args.image_files = [os.path.abspath(os.path.expanduser(f)) for f in args.image_files]
+
+    #for argname in ['t2star_image', 'mton_image', 'mtoff_image']:
+    #    if getattr(args, argname) is not None:
+    #        setattr(args, argname, os.path.abspath(os.path.expanduser(getattr(args, argname))))
 
     wf = create_lme_metrics_workflow(args.directory, args.patient_id, args.scan_id, args.reg_mt, args.coord)
 
-    for argname in ['t2star_image', 'mton_image', 'mtoff_image']:
-        if getattr(args, argname) is not None:
-            setattr(wf.inputs.input_node, argname, getattr(args, argname))
+    if args.image_files is not None:
+        wf.inputs.input_node.image_files = args.image_files
+    #for argname in ['t2star_image', 'mton_image', 'mtoff_image']:
+    #    if getattr(args, argname) is not None:
+    #        setattr(wf.inputs.input_node, argname, getattr(args, argname))
 
     if args.num_threads == 1:
         wf.run()
