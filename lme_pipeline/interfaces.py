@@ -100,8 +100,7 @@ class ConvertTransformFile(ANTSCommand):
 
 
 class ProcessLMEInputSpec(BaseInterfaceInputSpec):
-    mtr_file = File(exists=True, desc='file to threshold', mandatory=True)
-    t2star_file = File(exists=True, desc='file to threshold', mandatory=True)
+    image_files = traits.List(File(exists=True, desc='file to threshold'))
     scan_path = Directory(exists=True, desc='file to threshold', mandatory=True)#traits.Str('combined.mat', desc='output file name', argstr='%s', usedefault=True)
     transform_file = File(exists=True, desc='file to threshold', mandatory=True)
     prefix = traits.String('output', usedefault=True)
@@ -115,29 +114,29 @@ class ProcessLME(BaseInterface):
     output_spec = ProcessLMEOutputSpec
 
     def _run_interface(self, runtime):
+        def flatten(t):
+            return [item for sublist in t for item in sublist]
 
-        # Get necessary files
+        # Get Nii.gz files
         pgflair_orig_file = glob(os.path.join(self.inputs.scan_path, 'raw', '*_FLAIRPost_3D.nii.gz'))[0]
-
         macruise_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise.nii.gz'))[0]
         pgflair_file = glob(os.path.join(self.inputs.scan_path, '*_FLAIRPost_3D_reg.nii.gz'))[0]
 
-        # Levelset files
+        # Get levelset files
         outer_ls_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_outer.nii.gz'))[0]
         central_ls_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_central.nii.gz'))[0]
         inner_ls_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_inner.nii.gz'))[0]
 
         outer_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_outer_thickness.vtk'))[0]
         central_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_central.vtk'))[0]
-        # inner_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_inner.vtk'))[0]
 
-        coord_orig = self.inputs.coordinate
-
+        # Load transform
         transform = []
         with open(self.inputs.transform_file) as textFile:
             for line in textFile:
                 transform.append([float(i) for i in line.split()])
 
+        # Get up Qform matrices (for transforming coordinates)
         pgflair_orig_obj = nib.load(pgflair_orig_file)
         pgflair_orig_data = pgflair_orig_obj.get_fdata()
         Qform_orig = pgflair_orig_obj.affine
@@ -146,32 +145,21 @@ class ProcessLME(BaseInterface):
         pgflair_data = pgflair_obj.get_fdata()
         Qform = pgflair_obj.affine
 
-        # Voxel location in MNI atlas space
-        p_orig = np.matmul(Qform_orig,coord_orig + (1,))
-        p_new = np.matmul(np.linalg.inv(transform),p_orig)
-        coord = np.round(np.matmul(np.linalg.inv(Qform),p_new)[0:3]).astype(int)
-
-        # TODO: Separate MSP to its own interface
+        # Estimate MSP from WM labels
         macruise_obj = nib.load(macruise_file)
         macruise_data = macruise_obj.get_fdata()
         wm_X = np.vstack((np.argwhere(macruise_data == 44), np.argwhere(macruise_data == 45)))
         wm_y = np.concatenate((np.ones(np.sum(macruise_data == 44)),np.zeros(np.sum(macruise_data == 45))))
 
         # Estimate MSP as a vertical line using logistic regression on the left and right WM coordinates
-        # TODO: Allow for rotation?
         log_reg = LogisticRegression()
         log_reg.fit(wm_X[:, 0].reshape(-1, 1), wm_y)
-
         parameters = log_reg.coef_[0]
         parameter0 = log_reg.intercept_
         msp = -parameter0/parameters
 
-        opp = np.empty_like(coord)
-        opp[:] = coord
-        opp[0] = np.round(2*msp - coord[0])
-
-
         #Load VTK files
+        #Outer surface
         reader = vtk.vtkPolyDataReader()
         reader.SetFileName(outer_file)
         reader.Update()
@@ -181,6 +169,7 @@ class ProcessLME(BaseInterface):
         nodes_vtk_array = reader.GetOutput().GetPointData().GetScalars()
         outer_surface_thickness_nodes = 0.8 * vtk_to_numpy(nodes_vtk_array)
 
+        #Central surface
         reader = vtk.vtkPolyDataReader()
         reader.SetFileName(central_file)
         reader.Update()
@@ -188,80 +177,115 @@ class ProcessLME(BaseInterface):
         nodes_vtk_array = reader.GetOutput().GetPoints().GetData()
         central_surface_nodes = vtk_to_numpy(nodes_vtk_array)
 
-        #Determine central surface coordinates
-        if coord[0] > msp: #Limit central surface coordinates to only those on the same side as coord
-            outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] > msp, :]
-            thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:,0] > msp]
-        else:
-            outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] < msp, :]
-            thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:, 0] < msp]
-
-        n = np.argmin(np.sum((outer_nodes - coord)**2, 1))
-        coord_out = outer_nodes[n, :]
-        coord_thickness_out = thickness_nodes[n]
-        n = np.argmin(np.sum((central_surface_nodes - coord_out)**2, 1))
-        coord_cen = central_surface_nodes[n, :]
-
-        #This code block forces the opposite class to have the same class as coord
-        #if coord_class%2==0:
-        #    opp_class = coord_class + 1
-        #else:
-        #    opp_class = coord_class - 1
-        #nodes_numpy_array_round = np.round(central_surface_nodes).astype(int)
-        #central_class = macruise_data[nodes_numpy_array_round[:,0],nodes_numpy_array_round[:,1],nodes_numpy_array_round[:,2]]
-        #nodes_numpy_array_cen_c = central_surface_nodes[central_class == opp_class,:]
-        #n =  np.argmin(np.sum((nodes_numpy_array_cen_c - opp)**2, 1))
-        #opp_cen = nodes_numpy_array_cen_c[n, :]
-        #coord_cen_round = np.round(coord_cen).astype(int)
-        #coord_class = macruise_data[coord_cen_round[0], coord_cen_round[1], coord_cen_round[2]]
-
-        if coord[0]>msp: #Opposite of above to ensure that opp is across the MSP
-            outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] < msp, :]
-            thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:, 0] < msp]
-        else:
-            outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] > msp, :]
-            thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:, 0] > msp]
-
-        n = np.argmin(np.sum((outer_nodes - opp)**2, 1))
-        opp_out = outer_nodes[n, :]
-        opp_thickness_out = thickness_nodes[n]
-        n = np.argmin(np.sum((central_surface_nodes - opp_out)**2, 1))
-        opp_cen = central_surface_nodes[n, :]
-
-
-        #Obtain values from thickness, MTR, T2star
-        #TODO: Separate to interface
+        #Obtain compute central surface thickness using levelset subtraction
         central_surface = nib.load(central_ls_file).get_fdata()
         outer_surface = nib.load(outer_ls_file).get_fdata()
         inner_surface = nib.load(inner_ls_file).get_fdata()
         thickness = np.abs(central_surface-outer_surface) + np.abs(central_surface-inner_surface)
-
-        MTR = nib.load(self.inputs.mtr_file).get_fdata()
-        T2star = nib.load(self.inputs.t2star_file).get_fdata()
-
-        T2star_interp = RegularGridInterpolator((np.arange(0,T2star.shape[0]), np.arange(0,T2star.shape[1]), np.arange(0,T2star.shape[2])), T2star)
-        T2star_opp = T2star_interp(opp_cen)
-        T2star_coord = T2star_interp(coord_cen)
-
-        MTR_interp = RegularGridInterpolator((np.arange(0,MTR.shape[0]), np.arange(0,MTR.shape[1]), np.arange(0,MTR.shape[2])), MTR)
-        MTR_opp = MTR_interp(opp_cen)
-        MTR_coord = MTR_interp(coord_cen)
-
         thickness_interp = RegularGridInterpolator((np.arange(0,thickness.shape[0]), np.arange(0,thickness.shape[1]), np.arange(0,thickness.shape[2])), 0.8*thickness)
-        thickness_opp = thickness_interp(opp_cen)
-        thickness_coord = thickness_interp(coord_cen)
 
+        #Load images to extract metrics from
+        num_images = 0
+        images = []
+        image_interp = []
+        image_flag = (self.inputs.image_files is not None)
+        if image_flag:
+            num_images = len(self.inputs.image_files)
+            for i, image_file in self.inputs.image_files:
+                images.append(nib.load(image_file).get_fdata())
+                image_interp.append(RegularGridInterpolator((np.arange(0,images[i].shape[0]), np.arange(0,images[i].shape[1]), np.arange(0,images[i].shape[2])), images[i]))
+
+        # Open output file and write first column
         outfile = self.inputs.prefix + '_lme.csv'
+        file = open(outfile, mode='w')
+        file_writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        col = flatten([['Metric%s_LME'%a,'Metric%s_Opp' % a] for a in list(range(num_images))])
 
-        with open(outfile, mode='w') as file:
-            file_writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            file_writer.writerow(['LME Coordinate (MNI)', 'LME Central Surface Coordinate (MNI)',
-                                  'Opposite Central Surface Coordinate (MNI)','CThickness LME (mm)',
-                                  'CThickness Opposite (mm)','OThickness LME (mm)',
-                                  'OThickness Opposite (mm)','MTR (LME)', 'MTR (Opposite)','T2Star (LME)',
-                                  'T2Star (Opposite)'])
+        file_writer.writerow(['LMECoord_MNI', 'LME_CSCoord_MNI',
+                                'Opp_CSCoord_MNI', 'CThickness_LME_mm',
+                                'CThickness_Opposite_mm','OThickness_LME_mm',
+                                'OThickness_Opposite_mm'] + col)
 
-            file_writer.writerow([coord, coord_cen, opp_cen, thickness_coord[0], thickness_opp[0], coord_thickness_out, opp_thickness_out, MTR_coord[0], MTR_opp[0], T2star_coord[0], T2star_opp[0]])
+        for coord_num, coord_orig in enumerate(self.inputs.coordinate):
+
+            if len(coord_orig) is not 3:
+                print('Coord ' + coord_orig + ' seems wrong. Please check you are passing in a list of coords')
+
+            # Voxel location in MNI atlas space
+            p_orig = np.matmul(Qform_orig,coord_orig + (1,))
+            p_new = np.matmul(np.linalg.inv(transform),p_orig)
+            coord = np.round(np.matmul(np.linalg.inv(Qform),p_new)[0:3]).astype(int)
+
+            #Create opposite coordinate, which differs only in the x coordinate
+            opp = np.empty_like(coord)
+            opp[:] = coord
+            opp[0] = np.round(2*msp - coord[0])
+
+            # Propagate coordinate onto the outer surface, then central surface
+            if coord[0] > msp: # Limit outer surface coordinates to only those on the same side as coord
+                outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] > msp, :]
+                thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:,0] > msp]
+            else:
+                outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] < msp, :]
+                thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:, 0] < msp]
+
+            # Find nearest point on outer surface, then closest point to that on central surface
+            n = np.argmin(np.sum((outer_nodes - coord)**2, 1))
+            coord_out = outer_nodes[n, :]
+            coord_thickness_out = thickness_nodes[n]
+            n = np.argmin(np.sum((central_surface_nodes - coord_out)**2, 1))
+            coord_cen = central_surface_nodes[n, :]
+
+            #Propagate the opposite coordinate onto the outer surface, then central surface
+            if coord[0]>msp: # Limit outer surface coordinates to only those on the opposite side as coord
+                outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] < msp, :]
+                thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:, 0] < msp]
+            else:
+                outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] > msp, :]
+                thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:, 0] > msp]
+
+            # Find nearest point on outer surface, then closest point to that on central surface
+            n = np.argmin(np.sum((outer_nodes - opp)**2, 1))
+            opp_out = outer_nodes[n, :]
+            opp_thickness_out = thickness_nodes[n]
+            n = np.argmin(np.sum((central_surface_nodes - opp_out)**2, 1))
+            opp_cen = central_surface_nodes[n, :]
+            
+            #MTR = nib.load(self.inputs.mtr_file).get_fdata()
+            #T2star = nib.load(self.inputs.t2star_file).get_fdata()
+            metric_coord = []
+            metric_opp = []
+            for interp in image_interp:
+                metric_coord.append(interp(coord_cen))
+                metric_opp.append(interp(opp_cen))
+
+            #T2star_interp = RegularGridInterpolator((np.arange(0,T2star.shape[0]), np.arange(0,T2star.shape[1]), np.arange(0,T2star.shape[2])), T2star)
+            #T2star_opp = T2star_interp(opp_cen)
+            #T2star_coord = T2star_interp(coord_cen)
+
+            #MTR_interp = RegularGridInterpolator((np.arange(0,MTR.shape[0]), np.arange(0,MTR.shape[1]), np.arange(0,MTR.shape[2])), MTR)
+            #MTR_opp = MTR_interp(opp_cen)
+            #MTR_coord = MTR_interp(coord_cen)
+
+            thickness_opp = thickness_interp(opp_cen)
+            thickness_coord = thickness_interp(coord_cen)
+
+            metrics = zip(metric_coord,metric_opp)
+
+            file_writer.writerow([coord, coord_cen, opp_cen, thickness_coord[0], thickness_opp[0], coord_thickness_out, opp_thickness_out] + flatten(zip(metric_coord,metric_opp)))
+
+
+        #outfile = self.inputs.prefix + '_lme.csv'
+
+        #with open(outfile, mode='w') as file:
+        #    file_writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        #    file_writer.writerow(['LME Coordinate (MNI)', 'LME Central Surface Coordinate (MNI)',
+        ##                        'Opposite Central Surface Coordinate (MNI)','CThickness LME (mm)',
+        #                        'CThickness Opposite (mm)','OThickness LME (mm)',
+        #                        'OThickness Opposite (mm)','MTR (LME)', 'MTR (Opposite)','T2Star (LME)',
+        #                        'T2Star (Opposite)'])
+
+        file.close()
 
         return runtime
 

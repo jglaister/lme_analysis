@@ -17,7 +17,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--directory', type=str, help='IACL root directory', required=True)
     parser.add_argument('-p', '--patient-id', type=str, required=True)
     parser.add_argument('-s', '--scan-id', type=str, required=True)
-    parser.add_argument('-i', '--image-files', help='List of image files to obtain metrics from', type=str, nargs='+')
+    parser.add_argument('-i', '--image-files', help='List of image files in IACL space to obtain metrics from', type=str, nargs='+')
     #parser.add_argument('-t2star', '--t2star-image', type=str)
     #parser.add_argument('-mton', '--mton-image',
     #                    help='MT_ON image or both MT images as a single volume (with MT first)', type=str)
