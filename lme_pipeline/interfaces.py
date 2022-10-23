@@ -128,7 +128,10 @@ class ProcessLME(BaseInterface):
         central_ls_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_central.nii.gz'))[0]
         inner_ls_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_inner.nii.gz'))[0]
 
-        outer_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_outer_thickness.vtk'))[0]
+        #outer_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_outer_thickness.vtk'))[0]
+        #central_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_central.vtk'))[0]
+        #Use levelset files instead of thickness files
+        outer_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_outer.vtk'))[0]
         central_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_central.vtk'))[0]
 
         # Load transform
