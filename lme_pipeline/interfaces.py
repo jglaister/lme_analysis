@@ -268,7 +268,7 @@ class ProcessLME(BaseInterface):
 
             metrics = zip(metric_coord,metric_opp)
 
-            file_writer.writerow([coord, coord_cen, opp_cen, thickness_coord[0], thickness_opp[0], coord_thickness_out, opp_thickness_out] + flatten(zip(metric_coord,metric_opp)))
+            file_writer.writerow([coord, coord_cen, opp_cen, thickness_coord[0], thickness_opp[0]] + flatten(zip(metric_coord,metric_opp)))
 
 
         #outfile = self.inputs.prefix + '_lme.csv'
