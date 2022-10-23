@@ -51,6 +51,8 @@ segment_cvs -d /Users/jiwonoh/Documents/CVS_test -t1 /Users/jiwonoh/Desktop/Test
     #If patient id and scan id are provided, assume an IACL folder structure
     #Otherwise assume that we are saving in the specified directory
     print(coord)
+    print(patient_id)
+    print(scan_id)
     if patient_id is not None and scan_id is not None:
         #base_dir = os.path.join(scan_directory, patient_id, 'pipeline')
         #name += '_' + scan_id
