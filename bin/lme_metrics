@@ -7,7 +7,7 @@ from lme_pipeline.workflows import create_lme_metrics_workflow
 def coords(s):
     try:
         print(s)
-        x, y, z = map(float, s.split(','))
+        x, y, z = map(int, s.split(','))
         print(x)
         print(y)
         print(z)
