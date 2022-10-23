@@ -66,7 +66,7 @@ segment_cvs -d /Users/jiwonoh/Documents/CVS_test -t1 /Users/jiwonoh/Desktop/Test
     #compute_t2star_flag = True if input_node.inputs.t2star_image is not None else False
     #compute_mtr_flag = True if input_node.inputs.mton_image is not None else False
     #split_mt_flag = True if compute_mtr_flag and input_node.inputs.mtoff_image is None else False
-
+    print(scan_path)
     # Grab needed results from IACL folder
     t1_image = glob(os.path.join(scan_path, '*_MPRAGEPre_reg.nii.gz'))[0]
     bm_image = glob(os.path.join(scan_path, '*_MPRAGEPre_reg_mask.nii.gz'))[0]
