@@ -118,6 +118,7 @@ class ProcessLME(BaseInterface):
             return [item for sublist in t for item in sublist]
 
         # Get Nii.gz files
+        print(self.inputs.scan_path)
         pgflair_orig_file = glob(os.path.join(self.inputs.scan_path, 'raw', '*_FLAIRPost_3D.nii.gz'))[0]
         macruise_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise.nii.gz'))[0]
         pgflair_file = glob(os.path.join(self.inputs.scan_path, '*_FLAIRPost_3D_reg.nii.gz'))[0]
