@@ -194,7 +194,7 @@ class ProcessLME(BaseInterface):
         image_flag = (self.inputs.image_files is not None)
         if image_flag:
             num_images = len(self.inputs.image_files)
-            for i, image_file in self.inputs.image_files:
+            for i, image_file in enumerate(self.inputs.image_files):
                 images.append(nib.load(image_file).get_fdata())
                 image_interp.append(RegularGridInterpolator((np.arange(0,images[i].shape[0]), np.arange(0,images[i].shape[1]), np.arange(0,images[i].shape[2])), images[i]))
 
