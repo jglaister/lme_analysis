@@ -171,7 +171,6 @@ class ProcessLME(BaseInterface):
         nodes_vtk_array = reader.GetOutput().GetPoints().GetData()
         outer_surface_nodes = vtk_to_numpy(nodes_vtk_array)
         nodes_vtk_array = reader.GetOutput().GetPointData().GetScalars()
-        outer_surface_thickness_nodes = 0.8 * vtk_to_numpy(nodes_vtk_array)
 
         #Central surface
         reader = vtk.vtkPolyDataReader()
@@ -211,7 +210,6 @@ class ProcessLME(BaseInterface):
                                 'OThickness_Opposite_mm'] + col)
 
         for coord_num, coord_orig in enumerate(self.inputs.coordinate):
-
             if len(coord_orig) is not 3:
                 print('Coord ' + coord_orig + ' seems wrong. Please check you are passing in a list of coords')
 
@@ -228,30 +226,24 @@ class ProcessLME(BaseInterface):
             # Propagate coordinate onto the outer surface, then central surface
             if coord[0] > msp: # Limit outer surface coordinates to only those on the same side as coord
                 outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] > msp, :]
-                thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:,0] > msp]
             else:
                 outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] < msp, :]
-                thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:, 0] < msp]
 
             # Find nearest point on outer surface, then closest point to that on central surface
             n = np.argmin(np.sum((outer_nodes - coord)**2, 1))
             coord_out = outer_nodes[n, :]
-            coord_thickness_out = thickness_nodes[n]
             n = np.argmin(np.sum((central_surface_nodes - coord_out)**2, 1))
             coord_cen = central_surface_nodes[n, :]
 
             #Propagate the opposite coordinate onto the outer surface, then central surface
             if coord[0]>msp: # Limit outer surface coordinates to only those on the opposite side as coord
                 outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] < msp, :]
-                thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:, 0] < msp]
             else:
                 outer_nodes = outer_surface_nodes[outer_surface_nodes[:,0] > msp, :]
-                thickness_nodes = outer_surface_thickness_nodes[outer_surface_nodes[:, 0] > msp]
 
             # Find nearest point on outer surface, then closest point to that on central surface
             n = np.argmin(np.sum((outer_nodes - opp)**2, 1))
             opp_out = outer_nodes[n, :]
-            opp_thickness_out = thickness_nodes[n]
             n = np.argmin(np.sum((central_surface_nodes - opp_out)**2, 1))
             opp_cen = central_surface_nodes[n, :]
             
