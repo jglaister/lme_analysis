@@ -35,7 +35,7 @@ class PipelineWorkflow(pe.Workflow):
             shutil.rmtree(self.base_dir)
 
 
-def create_lme_metrics_workflow(scan_directory, patient_id, scan_id, coord=None):#, reg_mt=True):
+def create_lme_metrics_workflow(scan_directory, patient_id, scan_id, image_flag=False, coord=None):#, reg_mt=True):
     """
 
 
