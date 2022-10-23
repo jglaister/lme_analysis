@@ -33,8 +33,7 @@ if __name__ == '__main__':
     if args.image_files is not None:
         args.image_files = [os.path.abspath(os.path.expanduser(f)) for f in args.image_files]
         image_flag = True
-    print(args.patient_id)
-    print(args.scan_id)
+
     wf = create_lme_metrics_workflow(args.directory, args.patient_id, args.scan_id, image_flag, args.coord)#, args.reg_mt
 
     if args.image_files is not None:
