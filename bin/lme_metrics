@@ -5,9 +5,12 @@ import os
 from lme_pipeline.workflows import create_lme_metrics_workflow
 
 def coords(s):
-    print(s)
     try:
+        print(s)
         x, y, z = map(int, s.split(','))
+        print(x)
+        print(y)
+        print(z)
         return x, y, z
     except:
         raise argparse.ArgumentTypeError("Coordinates must be x,y,z")
