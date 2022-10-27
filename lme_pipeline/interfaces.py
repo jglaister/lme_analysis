@@ -102,7 +102,7 @@ class ConvertTransformFile(ANTSCommand):
 class ProcessLMEInputSpec(BaseInterfaceInputSpec):
     image_files = traits.List(File(exists=True, desc='file to threshold'))
     scan_path = Directory(exists=True, desc='file to threshold', mandatory=True)#traits.Str('combined.mat', desc='output file name', argstr='%s', usedefault=True)
-    transform_file = File(exists=True, desc='file to threshold', mandatory=True)
+    transform_file = File(exists=True, desc='file to threshold')
     prefix = traits.String('output', usedefault=True)
     coordinate = traits.List(traits.Tuple(traits.Int, traits.Int, traits.Int), mandatory=True)
 
@@ -117,8 +117,12 @@ class ProcessLME(BaseInterface):
         def flatten(t):
             return [item for sublist in t for item in sublist]
 
+        
+        calculate_transform_flag = False
+        if self.inputs.transform_file is not None:
+            calculate_transform_flag = True
+
         # Get Nii.gz files
-        print(self.inputs.scan_path)
         pgflair_orig_file = glob(os.path.join(self.inputs.scan_path, 'raw', '*_FLAIRPost_3D.nii.gz'))[0]
         macruise_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise.nii.gz'))[0]
         pgflair_file = glob(os.path.join(self.inputs.scan_path, '*_FLAIRPost_3D_reg.nii.gz'))[0]
@@ -135,19 +139,23 @@ class ProcessLME(BaseInterface):
         central_file = glob(os.path.join(self.inputs.scan_path, '*_MPRAGEPre_reg_macruise_central.vtk'))[0]
 
         # Load transform
-        transform = []
-        with open(self.inputs.transform_file) as textFile:
-            for line in textFile:
-                transform.append([float(i) for i in line.split()])
+        concat_tform = np.identity(4)
+        if calculate_transform_flag:
+            transform = []
+            with open(self.inputs.transform_file) as textFile:
+                for line in textFile:
+                    transform.append([float(i) for i in line.split()])
 
-        # Get up Qform matrices (for transforming coordinates)
-        pgflair_orig_obj = nib.load(pgflair_orig_file)
-        pgflair_orig_data = pgflair_orig_obj.get_fdata()
-        Qform_orig = pgflair_orig_obj.affine
+            # Get up Qform matrices (for transforming coordinates)
+            pgflair_orig_obj = nib.load(pgflair_orig_file)
+            pgflair_orig_data = pgflair_orig_obj.get_fdata()
+            Qform_orig = pgflair_orig_obj.affine
 
-        pgflair_obj = nib.load(pgflair_file)
-        pgflair_data = pgflair_obj.get_fdata()
-        Qform = pgflair_obj.affine
+            pgflair_obj = nib.load(pgflair_file)
+            pgflair_data = pgflair_obj.get_fdata()
+            Qform = pgflair_obj.affine
+
+            concat_tform = np.matmul(np.linalg.inv(Qform),np.matmul(np.linalg.inv(transform),Qform_orig))
 
         # Estimate MSP from WM labels
         macruise_obj = nib.load(macruise_file)
@@ -214,9 +222,7 @@ class ProcessLME(BaseInterface):
                 print('Coord ' + coord_orig + ' seems wrong. Please check you are passing in a list of coords')
 
             # Voxel location in MNI atlas space
-            p_orig = np.matmul(Qform_orig,coord_orig + (1,))
-            p_new = np.matmul(np.linalg.inv(transform),p_orig)
-            coord = np.round(np.matmul(np.linalg.inv(Qform),p_new)[0:3]).astype(int)
+            coord = np.round(np.matmul(concat_tform,coord_orig + (1,))[0:3]).astype(int)
 
             #Create opposite coordinate, which differs only in the x coordinate
             opp = np.empty_like(coord)
