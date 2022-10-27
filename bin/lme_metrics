@@ -22,7 +22,8 @@ if __name__ == '__main__':
     parser.add_argument('-p', '--patient-id', type=str, required=True)
     parser.add_argument('-s', '--scan-id', type=str, required=True)
     parser.add_argument('-i', '--image-files', help='List of image files in IACL space to obtain metrics from', type=str, nargs='+')
-    parser.add_argument('-c', '--coord', type=coords, help='List of LME coordinates', nargs='+')
+    parser.add_argument('-c', '--coord', type=coords, help='List of LME coordinates in voxel space', nargs='+')
+    parser.add_argument('--tform-coord', help='Transform coordinates from original voxel space to MNI space', action='store_true', default=False)
     parser.add_argument('-t', '--num_threads', type=int, default=1)
     args = parser.parse_args()
 
@@ -34,7 +35,7 @@ if __name__ == '__main__':
         args.image_files = [os.path.abspath(os.path.expanduser(f)) for f in args.image_files]
         image_flag = True
 
-    wf = create_lme_metrics_workflow(args.directory, args.patient_id, args.scan_id, image_flag, args.coord)#, args.reg_mt
+    wf = create_lme_metrics_workflow(args.directory, args.patient_id, args.scan_id, image_flag, args.coord, args.tform_coord)#, args.reg_mt
 
     if args.image_files is not None:
         wf.inputs.input_node.image_files = args.image_files

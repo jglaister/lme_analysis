@@ -35,7 +35,7 @@ class PipelineWorkflow(pe.Workflow):
             shutil.rmtree(self.base_dir)
 
 
-def create_lme_metrics_workflow(scan_directory, patient_id, scan_id, image_flag=False, coord=None):#, reg_mt=True):
+def create_lme_metrics_workflow(scan_directory, patient_id, scan_id, image_flag=False, coord=None, tform_coords=False):#, reg_mt=True):
     """
 
 
@@ -74,16 +74,18 @@ segment_cvs -d /Users/jiwonoh/Documents/CVS_test -t1 /Users/jiwonoh/Desktop/Test
     flair_tf = glob(os.path.join(scan_path, '*_FLAIRPost_3D_reg.mat'))[0]
 
     # Get transformation from FLAIR space to T1 space
-    convert_tf = pe.Node(ConvertTransformFile(), 'convert_tf')
-    convert_tf.inputs.input_transform_file = flair_tf
-    convert_tf.inputs.hm = True
-    convert_tf.inputs.ras = True
-    wf.add_nodes([convert_tf])
+    if tform_coords:
+        convert_tf = pe.Node(ConvertTransformFile(), 'convert_tf')
+        convert_tf.inputs.input_transform_file = flair_tf
+        convert_tf.inputs.hm = True
+        convert_tf.inputs.ras = True
+        wf.add_nodes([convert_tf])
 
     process_lme = pe.Node(ProcessLME(), 'process_lme')
     process_lme.inputs.scan_path = scan_path
     process_lme.inputs.coordinate = coord
-    wf.connect(convert_tf, 'transform_file', process_lme, 'transform_file')
+    if tform_coords:
+        wf.connect(convert_tf, 'transform_file', process_lme, 'transform_file')
     if image_flag:
         wf.connect(input_node, 'image_files', process_lme, 'image_files')
 
