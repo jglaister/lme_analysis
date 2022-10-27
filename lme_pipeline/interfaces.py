@@ -214,8 +214,7 @@ class ProcessLME(BaseInterface):
 
         file_writer.writerow(['LMECoord_MNI', 'LME_CSCoord_MNI',
                                 'Opp_CSCoord_MNI', 'CThickness_LME_mm',
-                                'CThickness_Opposite_mm','OThickness_LME_mm',
-                                'OThickness_Opposite_mm'] + col)
+                                'CThickness_Opposite_mm'] + col)
 
         for coord_num, coord_orig in enumerate(self.inputs.coordinate):
             if len(coord_orig) is not 3:
