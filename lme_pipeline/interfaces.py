@@ -102,7 +102,7 @@ class ConvertTransformFile(ANTSCommand):
 class ProcessLMEInputSpec(BaseInterfaceInputSpec):
     image_files = traits.List(File(exists=True, desc='file to threshold'))
     scan_path = Directory(exists=True, desc='file to threshold', mandatory=True)#traits.Str('combined.mat', desc='output file name', argstr='%s', usedefault=True)
-    transform_file = File(exists=True, desc='file to threshold')
+    transform_file = File(desc='file to threshold', default=None)
     prefix = traits.String('output', usedefault=True)
     coordinate = traits.List(traits.Tuple(traits.Int, traits.Int, traits.Int), mandatory=True)
 
