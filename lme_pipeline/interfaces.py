@@ -102,7 +102,7 @@ class ConvertTransformFile(ANTSCommand):
 class ProcessLMEInputSpec(BaseInterfaceInputSpec):
     image_files = traits.List(File(exists=True, desc='file to threshold'))
     scan_path = Directory(exists=True, desc='file to threshold', mandatory=True)#traits.Str('combined.mat', desc='output file name', argstr='%s', usedefault=True)
-    transform_file = File(desc='file to threshold', default=None)
+    transform_file = File(desc='file to threshold')
     prefix = traits.String('output', usedefault=True)
     coordinate = traits.List(traits.Tuple(traits.Int, traits.Int, traits.Int), mandatory=True)
 
@@ -119,7 +119,7 @@ class ProcessLME(BaseInterface):
 
         
         calculate_transform_flag = False
-        if self.inputs.transform_file is not None:
+        if isdefined(self.inputs.transform_file):
             calculate_transform_flag = True
 
         # Get Nii.gz files
