@@ -92,8 +92,8 @@ segment_cvs -d /Users/jiwonoh/Documents/CVS_test -t1 /Users/jiwonoh/Desktop/Test
     # Output node to save outputs
     output_node = pe.Node(util.IdentityInterface(fields=['transform_file', 'lme_csv']),
                           mandatory_inputs=False, name='output_node')
-
-    wf.connect(convert_tf, 'transform_file', output_node, 'transform_file')
+    if tform_coords:
+        wf.connect(convert_tf, 'transform_file', output_node, 'transform_file')
 
     # bias_correction_t1 = Node(N4BiasFieldCorrection(), "bias_t1")
     # bias_correction_t1.inputs.shrink_factor = 4
