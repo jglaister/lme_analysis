@@ -210,11 +210,14 @@ class ProcessLME(BaseInterface):
         outfile = self.inputs.prefix + '_lme.csv'
         file = open(outfile, mode='w')
         file_writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        col = flatten([['Metric%s_LME'%a,'Metric%s_Opp' % a] for a in list(range(num_images))])
-
-        file_writer.writerow(['LMECoord_MNI', 'LME_CSCoord_MNI',
-                                'Opp_CSCoord_MNI', 'CThickness_LME_mm',
-                                'CThickness_Opposite_mm'] + col)
+        #col = flatten([['Metric%s_LME'%a,'Metric%s_Opp' % a] for a in list(range(num_images))])
+        col = flatten([['{}_LME,'.format(os.path.split(a)[0]),'{}_Opp'%os.path.split(a)[0]] for a in self.inputs.image_files])
+        col = flatten([['{}_LME,'.format(os.path.split(a)[0]),'{}_Opp'.format(os.path.split(a)[0])] for a in self.inputs.image_files])
+        file_writer.writerow(['LME_Coordinate_MNI',
+                              'LME_Central_Surface_Coord_MNI',
+                              'Opp_Central_Surface_MNI',
+                              'Thickness_LME_mm',
+                              'Thickness_Opposite_mm'] + col)
 
         for coord_num, coord_orig in enumerate(self.inputs.coordinate):
             if len(coord_orig) is not 3:
