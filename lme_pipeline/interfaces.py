@@ -260,8 +260,8 @@ class ProcessLME(BaseInterface):
             metric_coord = []
             metric_opp = []
             for interp in image_interp:
-                metric_coord.append(interp(coord_cen))
-                metric_opp.append(interp(opp_cen))
+                metric_coord.append(interp(coord_cen)[0])
+                metric_opp.append(interp(opp_cen)[0])
 
             #T2star_interp = RegularGridInterpolator((np.arange(0,T2star.shape[0]), np.arange(0,T2star.shape[1]), np.arange(0,T2star.shape[2])), T2star)
             #T2star_opp = T2star_interp(opp_cen)
